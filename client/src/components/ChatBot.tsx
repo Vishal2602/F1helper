@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getAIResponse } from "@/lib/openai-service";
@@ -13,7 +13,10 @@ export function ChatBot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Array<{ isUser: boolean; text: string }>>([
-    { isUser: false, text: "Hi! I'm your F1 visa assistant. How can I help you today?" }
+    {
+      isUser: false,
+      text: "Hi! I'm your F1 visa assistant. I can help you with questions about academic requirements, work authorization, travel, and maintaining your visa status. What would you like to know?"
+    }
   ]);
 
   const { data: qaResponses } = useQuery<QAResponse[]>({
@@ -23,9 +26,12 @@ export function ChatBot() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = { isUser: true, text: input };
+    const userMessage = { isUser: true, text: input.trim() };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+
+    // Show typing indicator immediately
+    setMessages(prev => [...prev, { isUser: false, text: "..." }]);
 
     try {
       // First check for exact matches in our Q&A database
@@ -48,12 +54,13 @@ export function ChatBot() {
         botResponse = await getAIResponse(input);
       }
 
-      setMessages(prev => [...prev, { isUser: false, text: botResponse }]);
+      // Replace typing indicator with actual response
+      setMessages(prev => [...prev.slice(0, -1), { isUser: false, text: botResponse }]);
     } catch (error) {
       console.error("Error processing message:", error);
-      setMessages(prev => [...prev, {
+      setMessages(prev => [...prev.slice(0, -1), {
         isUser: false,
-        text: "I'm having trouble processing your request. Please try again later."
+        text: "I'm having trouble understanding that right now. Could you try rephrasing your question?"
       }]);
     } finally {
       setIsLoading(false);
@@ -75,6 +82,8 @@ export function ChatBot() {
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.isUser
                       ? "bg-primary text-primary-foreground"
+                      : msg.text === "..."
+                      ? "bg-muted animate-pulse"
                       : "bg-muted"
                   }`}
                 >
@@ -88,12 +97,16 @@ export function ChatBot() {
           <Input
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Type your question..."
+            placeholder="Ask about F1 visa rules, work permits, or travel..."
             onKeyPress={e => e.key === "Enter" && handleSend()}
             disabled={isLoading}
           />
           <Button onClick={handleSend} disabled={isLoading}>
-            <Send className="h-4 w-4" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </CardContent>
