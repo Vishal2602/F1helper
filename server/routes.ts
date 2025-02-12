@@ -4,8 +4,17 @@ import { storage } from "./storage";
 
 export function registerRoutes(app: Express) {
   app.get("/api/config", (_req, res) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({
+        message: "OpenAI API key not configured"
+      });
+    }
+
+    // Only send the API key if it's properly configured
     res.json({
-      openaiKey: process.env.OPENAI_API_KEY
+      openaiKey: apiKey
     });
   });
 
