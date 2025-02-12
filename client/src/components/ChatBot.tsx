@@ -23,17 +23,41 @@ export function ChatBot() {
   const [sessionId] = useState(() => nanoid());
   const [currentEmotion, setCurrentEmotion] = useState<
     "neutral" | "happy" | "thinking" | "confused"
-  >("neutral");
+  >("happy");
   const [messages, setMessages] = useState<Message[]>([
     {
       isUser: false,
-      text: "Hi! I'm your F1 visa assistant. I can help you with questions about academic requirements, work authorization, travel, and maintaining your visa status. What would you like to know?"
+      text: "Hi! I'm your friendly F1 visa assistant. How can I help you today? Feel free to ask me anything about F1 visa requirements, work permits, or academic regulations."
     }
   ]);
 
   const { data: qaResponses } = useQuery<QAResponse[]>({
     queryKey: ["/api/qa"]
   });
+
+  // Helper function to check for greeting patterns
+  const isGreeting = (text: string): boolean => {
+    const greetingPatterns = [
+      /^hi\b/i,
+      /^hello\b/i,
+      /^hey\b/i,
+      /^greetings/i,
+      /^good\s*(morning|afternoon|evening)/i,
+      /^howdy\b/i,
+    ];
+    return greetingPatterns.some(pattern => pattern.test(text.trim()));
+  };
+
+  // Helper function to get random greeting response
+  const getGreetingResponse = (): string => {
+    const responses = [
+      "Hello! How can I assist you with your F1 visa questions today?",
+      "Hi there! I'm here to help with any F1 visa related questions you might have.",
+      "Greetings! What would you like to know about F1 visa regulations?",
+      "Hello! I'm your F1 visa assistant. What questions do you have about studying in the US?",
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -47,7 +71,19 @@ export function ChatBot() {
     setMessages(prev => [...prev, { isUser: false, text: "..." }]);
 
     try {
-      // First try Dialogflow for intent detection
+      // First check if it's a greeting
+      if (isGreeting(input.trim())) {
+        setCurrentEmotion("happy");
+        setMessages(prev => [...prev.slice(0, -1), { 
+          isUser: false, 
+          text: getGreetingResponse()
+        }]);
+        setIsLoading(false);
+        setInput("");
+        return;
+      }
+
+      // Then try Dialogflow for intent detection
       try {
         const dialogflowResponse = await detectIntent(input.trim(), sessionId);
 
