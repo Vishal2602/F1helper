@@ -60,7 +60,7 @@ export async function getAIResponse(question: string, context?: string): Promise
     messages.push({ role: "user", content: question });
 
     const response = await client.chat.completions.create({
-      model: "grok-2-1212",
+      model: "gpt-3.5-turbo",
       messages: messages as any,
       temperature: 0.7,
       max_tokens: 500
