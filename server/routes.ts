@@ -3,6 +3,12 @@ import { createServer } from "http";
 import { storage } from "./storage";
 
 export function registerRoutes(app: Express) {
+  app.get("/api/config", (_req, res) => {
+    res.json({
+      openaiKey: process.env.OPENAI_API_KEY
+    });
+  });
+
   app.get("/api/qa", async (_req, res) => {
     const qaList = await storage.getAllQA();
     res.json(qaList);

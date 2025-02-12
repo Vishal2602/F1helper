@@ -7,9 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Send } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { getAIResponse } from "@/lib/openai-service";
 
 export function ChatBot() {
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Array<{ isUser: boolean; text: string }>>([
     { isUser: false, text: "Hi! I'm your F1 visa assistant. How can I help you today?" }
   ]);
@@ -19,35 +21,44 @@ export function ChatBot() {
   });
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage = { isUser: true, text: input };
     setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
 
-    // Simple matching against predefined Q&A
-    const match = qaResponses?.find(qa => 
-      qa.question.toLowerCase().includes(input.toLowerCase()) ||
-      input.toLowerCase().includes(qa.question.toLowerCase())
-    );
+    try {
+      // First check for exact matches in our Q&A database
+      const match = qaResponses?.find(qa => 
+        qa.question.toLowerCase().includes(input.toLowerCase()) ||
+        input.toLowerCase().includes(qa.question.toLowerCase())
+      );
 
-    if (match) {
-      // Track the question
-      await apiRequest("POST", "/api/analytics/track", {
-        question: match.question,
-        category: match.category
-      });
+      let botResponse = "";
+
+      if (match) {
+        // Use predefined answer and track the question
+        botResponse = match.answer;
+        await apiRequest("POST", "/api/analytics/track", {
+          question: match.question,
+          category: match.category
+        });
+      } else {
+        // Get AI-generated response
+        botResponse = await getAIResponse(input);
+      }
+
+      setMessages(prev => [...prev, { isUser: false, text: botResponse }]);
+    } catch (error) {
+      console.error("Error processing message:", error);
+      setMessages(prev => [...prev, {
+        isUser: false,
+        text: "I'm having trouble processing your request. Please try again later."
+      }]);
+    } finally {
+      setIsLoading(false);
+      setInput("");
     }
-
-    const botResponse = {
-      isUser: false,
-      text: match?.answer || "I'm not sure about that. Please contact your DSO for specific guidance."
-    };
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, botResponse]);
-    }, 500);
-
-    setInput("");
   };
 
   return (
@@ -79,8 +90,9 @@ export function ChatBot() {
             onChange={e => setInput(e.target.value)}
             placeholder="Type your question..."
             onKeyPress={e => e.key === "Enter" && handleSend()}
+            disabled={isLoading}
           />
-          <Button onClick={handleSend}>
+          <Button onClick={handleSend} disabled={isLoading}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
