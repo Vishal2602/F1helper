@@ -12,18 +12,24 @@ async function initializeDialogflow() {
       }
 
       const config = await response.json();
-      if (!config.projectId) {
-        throw new Error('Dialogflow project ID not configured');
+      if (!config.projectId || !config.credentials) {
+        throw new Error('Missing Dialogflow configuration');
       }
 
+      // Parse credentials if they're a string
+      const parsedCredentials = typeof config.credentials === 'string' 
+        ? JSON.parse(config.credentials) 
+        : config.credentials;
+
       sessionsClient = new SessionsClient({
-        credentials: JSON.parse(config.credentials),
+        credentials: parsedCredentials,
         projectId: config.projectId
       });
+
     } catch (error) {
       console.error('Dialogflow initialization error:', error);
       sessionsClient = null;
-      throw error;
+      throw new Error('Failed to initialize Dialogflow client');
     }
   }
   return sessionsClient;
@@ -68,6 +74,10 @@ export async function detectIntent(
     };
   } catch (error: any) {
     console.error('Error detecting intent:', error);
-    throw new Error('Failed to process with Dialogflow: ' + error.message);
+    return {
+      fulfillmentText: '',
+      intent: null,
+      confidence: 0
+    };
   }
 }

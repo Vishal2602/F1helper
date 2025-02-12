@@ -27,10 +27,19 @@ export function registerRoutes(app: Express) {
       });
     }
 
-    res.json({
-      projectId,
-      credentials
-    });
+    try {
+      // Validate that credentials are proper JSON
+      JSON.parse(credentials);
+
+      res.json({
+        projectId,
+        credentials
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Invalid Dialogflow credentials format"
+      });
+    }
   });
 
   app.get("/api/qa", async (_req, res) => {

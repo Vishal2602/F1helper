@@ -38,23 +38,28 @@ export function ChatBot() {
 
     try {
       // First try Dialogflow for intent detection
-      const dialogflowResponse = await detectIntent(input.trim(), sessionId);
+      try {
+        const dialogflowResponse = await detectIntent(input.trim(), sessionId);
 
-      if (dialogflowResponse.confidence > 0.7 && dialogflowResponse.fulfillmentText) {
-        // Use Dialogflow response if confidence is high
-        setMessages(prev => [...prev.slice(0, -1), { 
-          isUser: false, 
-          text: dialogflowResponse.fulfillmentText 
-        }]);
+        if (dialogflowResponse.confidence > 0.7 && dialogflowResponse.fulfillmentText) {
+          // Use Dialogflow response if confidence is high
+          setMessages(prev => [...prev.slice(0, -1), { 
+            isUser: false, 
+            text: dialogflowResponse.fulfillmentText 
+          }]);
 
-        // Track the question if we have an intent
-        if (dialogflowResponse.intent) {
-          await apiRequest("POST", "/api/analytics/track", {
-            question: input.trim(),
-            category: dialogflowResponse.intent
-          });
+          // Track the question if we have an intent
+          if (dialogflowResponse.intent) {
+            await apiRequest("POST", "/api/analytics/track", {
+              question: input.trim(),
+              category: dialogflowResponse.intent
+            });
+          }
+          return;
         }
-        return;
+      } catch (dialogflowError) {
+        console.error("Dialogflow error:", dialogflowError);
+        // Continue to other fallbacks if Dialogflow fails
       }
 
       // If Dialogflow confidence is low, check our Q&A database
