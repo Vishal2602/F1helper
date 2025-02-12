@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2 } from "lucide-react";
 import { MascotAvatar } from "./MascotAvatar";
-import { getAIResponse } from "@/lib/openai-service";
+import { detectIntent } from "@/lib/dialogflow-service";
+import { getGrokResponse } from "@/lib/grok-service";
 import { nanoid } from "nanoid";
 
 type Message = {
@@ -70,9 +71,23 @@ export function ChatBot() {
         response = getGreetingResponse();
         setCurrentEmotion("happy");
       } else {
-        // Get AI response for non-greeting messages
-        response = await getAIResponse(input.trim());
-        setCurrentEmotion("neutral");
+        // First try to detect intent with Dialogflow
+        const dialogflowResponse = await detectIntent(input.trim(), sessionId);
+
+        // Use Grok to generate a natural response
+        let contextPrompt = "";
+        if (dialogflowResponse.intent) {
+          contextPrompt = `The user is asking about ${dialogflowResponse.intent}. `;
+        }
+
+        response = await getGrokResponse(input.trim(), contextPrompt);
+
+        // Set emotion based on confidence
+        if (dialogflowResponse.confidence > 0.7) {
+          setCurrentEmotion("happy");
+        } else {
+          setCurrentEmotion("neutral");
+        }
       }
 
       // Replace typing indicator with actual response

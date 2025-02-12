@@ -1,23 +1,23 @@
 import OpenAI from "openai";
-import { apiRequest } from "./queryClient";
 
 let openai: OpenAI | null = null;
 
 async function initializeOpenAI() {
   if (!openai) {
     try {
-      const response = await fetch("/api/config/openai");
+      const response = await fetch("/api/config/xai");
       if (!response.ok) {
         throw new Error(`Failed to fetch config: ${response.statusText}`);
       }
 
       const config = await response.json();
-      if (!config.openaiKey) {
-        throw new Error("OpenAI API key not found in server config");
+      if (!config.xaiKey) {
+        throw new Error("xAI API key not found in server config");
       }
 
       openai = new OpenAI({
-        apiKey: config.openaiKey,
+        baseURL: "https://api.x.ai/v1",
+        apiKey: config.xaiKey,
         dangerouslyAllowBrowser: true
       });
 
@@ -60,8 +60,8 @@ export async function getAIResponse(question: string, context?: string): Promise
     messages.push({ role: "user", content: question });
 
     const response = await client.chat.completions.create({
-      model: "gpt-4",
-      messages,
+      model: "grok-2-1212",
+      messages: messages as any,
       temperature: 0.7,
       max_tokens: 500
     });

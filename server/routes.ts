@@ -3,17 +3,17 @@ import { createServer } from "http";
 import { storage } from "./storage";
 
 export function registerRoutes(app: Express) {
-  app.get("/api/config/openai", (_req, res) => {
-    const openaiKey = process.env.OPENAI_API_KEY;
+  app.get("/api/config/xai", (_req, res) => {
+    const xaiKey = process.env.XAI_API_KEY;
 
-    if (!openaiKey) {
+    if (!xaiKey) {
       return res.status(500).json({
-        message: "OpenAI API key not configured"
+        message: "xAI API key not configured"
       });
     }
 
     res.json({
-      openaiKey
+      xaiKey
     });
   });
 
