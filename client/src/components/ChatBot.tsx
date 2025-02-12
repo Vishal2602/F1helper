@@ -3,13 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQuery } from "@tanstack/react-query";
 import { Send, Loader2 } from "lucide-react";
-import type { QAResponse } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { detectIntent } from "@/lib/dialogflow-service";
-import { detectEmotion } from "@/lib/emotion-detector";
 import { MascotAvatar } from "./MascotAvatar";
+import { getAIResponse } from "@/lib/openai-service";
 import { nanoid } from "nanoid";
 
 type Message = {
@@ -30,10 +26,6 @@ export function ChatBot() {
       text: "Hi! I'm your friendly F1 visa assistant. How can I help you today? Feel free to ask me anything about F1 visa requirements, work permits, or academic regulations."
     }
   ]);
-
-  const { data: qaResponses } = useQuery<QAResponse[]>({
-    queryKey: ["/api/qa"]
-  });
 
   // Helper function to check for greeting patterns
   const isGreeting = (text: string): boolean => {
@@ -71,70 +63,20 @@ export function ChatBot() {
     setMessages(prev => [...prev, { isUser: false, text: "..." }]);
 
     try {
+      let response: string;
+
       // First check if it's a greeting
       if (isGreeting(input.trim())) {
+        response = getGreetingResponse();
         setCurrentEmotion("happy");
-        setMessages(prev => [...prev.slice(0, -1), { 
-          isUser: false, 
-          text: getGreetingResponse()
-        }]);
-        setIsLoading(false);
-        setInput("");
-        return;
-      }
-
-      // Then try Dialogflow for intent detection
-      try {
-        const dialogflowResponse = await detectIntent(input.trim(), sessionId);
-
-        if (dialogflowResponse.confidence > 0.7 && dialogflowResponse.fulfillmentText) {
-          // Use Dialogflow response if confidence is high
-          const botResponse = dialogflowResponse.fulfillmentText;
-          setCurrentEmotion(detectEmotion(botResponse));
-          setMessages(prev => [...prev.slice(0, -1), { 
-            isUser: false, 
-            text: botResponse
-          }]);
-
-          // Track the question if we have an intent
-          if (dialogflowResponse.intent) {
-            await apiRequest("POST", "/api/analytics/track", {
-              question: input.trim(),
-              category: dialogflowResponse.intent
-            });
-          }
-          return;
-        }
-      } catch (dialogflowError) {
-        console.error("Dialogflow error:", dialogflowError);
-        // Continue to Q&A database if Dialogflow fails
-      }
-
-      // Check our Q&A database
-      const match = qaResponses?.find(qa => 
-        qa.question.toLowerCase().includes(input.toLowerCase()) ||
-        input.toLowerCase().includes(qa.question.toLowerCase())
-      );
-
-      let botResponse: string;
-
-      if (match) {
-        // Use predefined answer and track the question
-        botResponse = match.answer;
-        await apiRequest("POST", "/api/analytics/track", {
-          question: match.question,
-          category: match.category
-        });
       } else {
-        // No match found, provide a helpful default response
-        botResponse = "I don't have specific information about that. To ensure you get accurate guidance, please consult with your DSO (Designated School Official) or check the USCIS website: https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors";
+        // Get AI response for non-greeting messages
+        response = await getAIResponse(input.trim());
+        setCurrentEmotion("neutral");
       }
-
-      // Set emotion based on the response
-      setCurrentEmotion(detectEmotion(botResponse));
 
       // Replace typing indicator with actual response
-      setMessages(prev => [...prev.slice(0, -1), { isUser: false, text: botResponse }]);
+      setMessages(prev => [...prev.slice(0, -1), { isUser: false, text: response }]);
     } catch (error) {
       console.error("Error processing message:", error);
       setCurrentEmotion("confused");

@@ -3,6 +3,20 @@ import { createServer } from "http";
 import { storage } from "./storage";
 
 export function registerRoutes(app: Express) {
+  app.get("/api/config/openai", (_req, res) => {
+    const openaiKey = process.env.OPENAI_API_KEY;
+
+    if (!openaiKey) {
+      return res.status(500).json({
+        message: "OpenAI API key not configured"
+      });
+    }
+
+    res.json({
+      openaiKey
+    });
+  });
+
   app.get("/api/config/dialogflow", (_req, res) => {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const credentials = process.env.GOOGLE_CLOUD_CREDENTIALS;

@@ -1,13 +1,12 @@
 import OpenAI from "openai";
 import { apiRequest } from "./queryClient";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024
 let openai: OpenAI | null = null;
 
 async function initializeOpenAI() {
   if (!openai) {
     try {
-      const response = await fetch("/api/config");
+      const response = await fetch("/api/config/openai");
       if (!response.ok) {
         throw new Error(`Failed to fetch config: ${response.statusText}`);
       }
@@ -22,12 +21,6 @@ async function initializeOpenAI() {
         dangerouslyAllowBrowser: true
       });
 
-      // Test the connection
-      await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "system", content: "Test connection" }],
-        max_tokens: 5
-      });
     } catch (error) {
       console.error("OpenAI initialization error:", error);
       openai = null;
@@ -37,26 +30,38 @@ async function initializeOpenAI() {
   return openai;
 }
 
-const SYSTEM_PROMPT = `You are an F1 visa expert assistant. Provide accurate, helpful information about F1 visa rules, regulations, and requirements. Always include relevant citations or references to official USCIS guidelines when possible. If unsure, recommend consulting with a DSO.
+const SYSTEM_PROMPT = `You are a helpful and friendly F1 visa expert assistant. Your responses should be conversational and empathetic while maintaining accuracy. Use your knowledge of F1 visa regulations and requirements to help international students.
 
-Key areas of expertise:
-- Academic requirements
+Key areas to focus on:
+- Academic requirements and maintaining status
 - Work authorization (CPT/OPT)
 - Travel regulations
-- Visa status maintenance
+- Visa interviews and application process
+- Health insurance requirements
+- Program extensions and transfers
 
-Keep responses concise, friendly and conversational. If a question is outside F1 visa scope, politely redirect to appropriate resources.`;
+Keep responses friendly but professional. If you're not completely sure about something, recommend consulting with a DSO for official guidance.
 
-export async function getAIResponse(question: string): Promise<string> {
+Example responses:
+"That's a great question about CPT! Let me explain how it works..."
+"I understand you're concerned about maintaining your status. Here's what you need to know..."
+"While I can give you general guidance about OPT, your specific case might have unique factors. I'd recommend discussing this with your DSO to ensure you have the most accurate information for your situation."`;
+
+export async function getAIResponse(question: string, context?: string): Promise<string> {
   try {
     const client = await initializeOpenAI();
 
+    const messages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: "Use this additional context from the F1 visa helper document if relevant: " + (context || "") }
+    ];
+
+    // Add the user's question
+    messages.push({ role: "user", content: question });
+
     const response = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: question }
-      ],
+      model: "gpt-4",
+      messages,
       temperature: 0.7,
       max_tokens: 500
     });
@@ -65,14 +70,11 @@ export async function getAIResponse(question: string): Promise<string> {
   } catch (error: any) {
     console.error("Error getting AI response:", error);
 
-    // Check for specific OpenAI API errors
-    const errorMessage = error?.error?.message || error?.message || "";
-
-    if (errorMessage.includes("API key")) {
+    if (error.message.includes("API key")) {
       return "I apologize, but there seems to be an issue with the AI service configuration. Please try again later.";
     }
 
-    if (errorMessage.includes("quota") || errorMessage.includes("rate limit")) {
+    if (error.message.includes("quota") || error.message.includes("rate limit")) {
       return "I apologize, but the AI service is temporarily unavailable due to high demand. Please try again in a few moments.";
     }
 
