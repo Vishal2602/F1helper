@@ -2,7 +2,8 @@ import { ChatBot } from "@/components/ChatBot";
 import { NotificationBoard } from "@/components/NotificationBoard";
 import { Button } from "@/components/ui/button";
 import { MEETING_LINKS } from "@/lib/constants";
-import { Calendar } from "lucide-react";
+import { Calendar, BarChart } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Home() {
   return (
@@ -12,6 +13,12 @@ export default function Home() {
         <p className="text-muted-foreground">
           Get answers to your F1 visa questions and stay updated with important deadlines
         </p>
+        <Link href="/analytics" className="inline-block mt-4">
+          <Button variant="outline" size="sm">
+            <BarChart className="h-4 w-4 mr-2" />
+            View Analytics
+          </Button>
+        </Link>
       </header>
 
       <div className="grid gap-8 md:grid-cols-[2fr_1fr]">

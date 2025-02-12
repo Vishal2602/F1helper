@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
-import { MessageSquare, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export function ChatBot() {
   const [input, setInput] = useState("");
@@ -17,7 +18,7 @@ export function ChatBot() {
     queryKey: ["/api/qa"]
   });
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     const userMessage = { isUser: true, text: input };
@@ -28,6 +29,14 @@ export function ChatBot() {
       qa.question.toLowerCase().includes(input.toLowerCase()) ||
       input.toLowerCase().includes(qa.question.toLowerCase())
     );
+
+    if (match) {
+      // Track the question
+      await apiRequest("POST", "/api/analytics/track", {
+        question: match.question,
+        category: match.category
+      });
+    }
 
     const botResponse = {
       isUser: false,

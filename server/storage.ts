@@ -1,4 +1,4 @@
-import { QAResponse, InsertQA, Notification, InsertNotification } from "@shared/schema";
+import { QAResponse, InsertQA, Notification, InsertNotification, QuestionAnalytics } from "@shared/schema";
 
 export interface IStorage {
   getAllQA(): Promise<QAResponse[]>;
@@ -6,19 +6,26 @@ export interface IStorage {
   createQA(qa: InsertQA): Promise<QAResponse>;
   getAllNotifications(): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
+  trackQuestion(question: string, category: string): Promise<void>;
+  getQuestionAnalytics(): Promise<QuestionAnalytics[]>;
+  getTopQuestions(limit?: number): Promise<QuestionAnalytics[]>;
 }
 
 export class MemStorage implements IStorage {
   private qaResponses: Map<number, QAResponse>;
   private notifications: Map<number, Notification>;
+  private analytics: Map<number, QuestionAnalytics>;
   private qaCurrentId: number;
   private notifCurrentId: number;
+  private analyticsCurrentId: number;
 
   constructor() {
     this.qaResponses = new Map();
     this.notifications = new Map();
+    this.analytics = new Map();
     this.qaCurrentId = 1;
     this.notifCurrentId = 1;
+    this.analyticsCurrentId = 1;
 
     // Populate initial Q&A data
     const initialQA: InsertQA[] = [
@@ -79,6 +86,40 @@ export class MemStorage implements IStorage {
     const newNotification = { ...notification, id };
     this.notifications.set(id, newNotification);
     return newNotification;
+  }
+
+  async trackQuestion(question: string, category: string): Promise<void> {
+    const existingAnalytic = Array.from(this.analytics.values()).find(
+      a => a.question.toLowerCase() === question.toLowerCase()
+    );
+
+    if (existingAnalytic) {
+      const updated = {
+        ...existingAnalytic,
+        count: existingAnalytic.count + 1,
+        lastAsked: new Date()
+      };
+      this.analytics.set(existingAnalytic.id, updated);
+    } else {
+      const id = this.analyticsCurrentId++;
+      this.analytics.set(id, {
+        id,
+        question,
+        category,
+        count: 1,
+        lastAsked: new Date()
+      });
+    }
+  }
+
+  async getQuestionAnalytics(): Promise<QuestionAnalytics[]> {
+    return Array.from(this.analytics.values());
+  }
+
+  async getTopQuestions(limit: number = 10): Promise<QuestionAnalytics[]> {
+    return Array.from(this.analytics.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
   }
 }
 

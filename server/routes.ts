@@ -18,6 +18,23 @@ export function registerRoutes(app: Express) {
     res.json(notifications);
   });
 
+  app.get("/api/analytics", async (_req, res) => {
+    const analytics = await storage.getQuestionAnalytics();
+    res.json(analytics);
+  });
+
+  app.get("/api/analytics/top", async (req, res) => {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const topQuestions = await storage.getTopQuestions(limit);
+    res.json(topQuestions);
+  });
+
+  app.post("/api/analytics/track", async (req, res) => {
+    const { question, category } = req.body;
+    await storage.trackQuestion(question, category);
+    res.json({ success: true });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
