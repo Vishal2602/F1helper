@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
-import { Send, Loader2, MessageCircle } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { detectIntent } from "@/lib/dialogflow-service";

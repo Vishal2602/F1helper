@@ -45,6 +45,10 @@ export async function detectIntent(
 }> {
   try {
     const client = await initializeDialogflow();
+    if (!client) {
+      throw new Error('Dialogflow client not initialized');
+    }
+
     const sessionPath = client.projectAgentSessionPath(
       process.env.GOOGLE_CLOUD_PROJECT_ID!,
       sessionId
