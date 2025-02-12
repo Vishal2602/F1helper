@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Send, Loader2 } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { getAIResponse } from "@/lib/openai-service";
 import { detectIntent } from "@/lib/dialogflow-service";
 import { nanoid } from "nanoid";
 
@@ -59,16 +58,16 @@ export function ChatBot() {
         }
       } catch (dialogflowError) {
         console.error("Dialogflow error:", dialogflowError);
-        // Continue to other fallbacks if Dialogflow fails
+        // Continue to Q&A database if Dialogflow fails
       }
 
-      // If Dialogflow confidence is low, check our Q&A database
+      // Check our Q&A database
       const match = qaResponses?.find(qa => 
         qa.question.toLowerCase().includes(input.toLowerCase()) ||
         input.toLowerCase().includes(qa.question.toLowerCase())
       );
 
-      let botResponse = "";
+      let botResponse: string;
 
       if (match) {
         // Use predefined answer and track the question
@@ -78,8 +77,8 @@ export function ChatBot() {
           category: match.category
         });
       } else {
-        // Fall back to OpenAI for complex or unique questions
-        botResponse = await getAIResponse(input);
+        // No match found, provide a helpful default response
+        botResponse = "I don't have specific information about that. To ensure you get accurate guidance, please consult with your DSO (Designated School Official) or check the USCIS website: https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors";
       }
 
       // Replace typing indicator with actual response
