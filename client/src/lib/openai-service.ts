@@ -16,7 +16,6 @@ async function initializeOpenAI() {
       }
 
       openai = new OpenAI({
-        baseURL: "https://api.x.ai/v1",
         apiKey: config.xaiKey,
         dangerouslyAllowBrowser: true
       });
