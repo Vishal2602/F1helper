@@ -8,10 +8,13 @@ import { Send, Loader2 } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getAIResponse } from "@/lib/openai-service";
+import { detectIntent } from "@/lib/dialogflow-service";
+import { nanoid } from "nanoid";
 
 export function ChatBot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => nanoid());
   const [messages, setMessages] = useState<Array<{ isUser: boolean; text: string }>>([
     {
       isUser: false,
@@ -34,7 +37,27 @@ export function ChatBot() {
     setMessages(prev => [...prev, { isUser: false, text: "..." }]);
 
     try {
-      // First check for exact matches in our Q&A database
+      // First try Dialogflow for intent detection
+      const dialogflowResponse = await detectIntent(input.trim(), sessionId);
+
+      if (dialogflowResponse.confidence > 0.7 && dialogflowResponse.fulfillmentText) {
+        // Use Dialogflow response if confidence is high
+        setMessages(prev => [...prev.slice(0, -1), { 
+          isUser: false, 
+          text: dialogflowResponse.fulfillmentText 
+        }]);
+
+        // Track the question if we have an intent
+        if (dialogflowResponse.intent) {
+          await apiRequest("POST", "/api/analytics/track", {
+            question: input.trim(),
+            category: dialogflowResponse.intent
+          });
+        }
+        return;
+      }
+
+      // If Dialogflow confidence is low, check our Q&A database
       const match = qaResponses?.find(qa => 
         qa.question.toLowerCase().includes(input.toLowerCase()) ||
         input.toLowerCase().includes(qa.question.toLowerCase())
@@ -50,7 +73,7 @@ export function ChatBot() {
           category: match.category
         });
       } else {
-        // Get AI-generated response
+        // Fall back to OpenAI for complex or unique questions
         botResponse = await getAIResponse(input);
       }
 

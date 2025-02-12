@@ -12,9 +12,24 @@ export function registerRoutes(app: Express) {
       });
     }
 
-    // Only send the API key if it's properly configured
     res.json({
       openaiKey: apiKey
+    });
+  });
+
+  app.get("/api/config/dialogflow", (_req, res) => {
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const credentials = process.env.GOOGLE_CLOUD_CREDENTIALS;
+
+    if (!projectId || !credentials) {
+      return res.status(500).json({
+        message: "Dialogflow credentials not configured"
+      });
+    }
+
+    res.json({
+      projectId,
+      credentials
     });
   });
 
