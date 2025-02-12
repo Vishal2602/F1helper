@@ -23,15 +23,13 @@ export function registerRoutes(app: Express) {
 
     if (!projectId || !credentials) {
       return res.status(500).json({
-        message: "Missing Dialogflow credentials. Please configure GOOGLE_CLOUD_PROJECT_ID and GOOGLE_CLOUD_CREDENTIALS in Secrets."
+        message: "Dialogflow credentials not configured"
       });
     }
 
     try {
-      const parsedCreds = JSON.parse(credentials);
-      if (!parsedCreds.type || !parsedCreds.project_id) {
-        throw new Error("Invalid credential format");
-      }
+      // Validate that credentials are proper JSON
+      JSON.parse(credentials);
 
       res.json({
         projectId,
@@ -39,7 +37,7 @@ export function registerRoutes(app: Express) {
       });
     } catch (error) {
       res.status(500).json({
-        message: "Invalid Dialogflow credentials format. Please ensure the credentials are valid JSON service account key."
+        message: "Invalid Dialogflow credentials format"
       });
     }
   });
