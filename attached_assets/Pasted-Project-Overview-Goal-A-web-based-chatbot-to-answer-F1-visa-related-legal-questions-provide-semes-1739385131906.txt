@@ -1,0 +1,107 @@
+Project Overview
+Goal: A web-based chatbot to answer F1 visa-related legal questions, provide semester alerts, and link to scheduling tools.
+MVP Features:
+
+Legal Q&A (work authorization, course load rules).
+
+Notification board for alerts/news (e.g., OPT deadlines).
+
+Hyperlink to schedule meetings (no calendar integration).
+No-Code/Low-Code Focus: Fast deployment with flexibility for future AI upgrades.
+
+Tech Stack Recommendation
+1. Chatbot Builder: Dialogflow ES (Free Tier)
+Why: No-code intent design, handles FAQs, integrates with React.
+
+Setup:
+
+Create intents for topics like:
+
+WorkAuthorizationIntent (CPT/OPT rules).
+
+CourseLoadIntent (minimum credits per semester).
+
+AlertsIntent (links to notification board).
+
+Add training phrases like:
+“Can I work off-campus?” → Response: “F1 students may work up to 20 hours/week on-campus during semesters.”
+
+2. Frontend (Webapp): React.js + Material-UI
+Why: Easy to embed Dialogflow, clean UI for notifications.
+
+Components:
+
+Chat interface (using react-chat-widget).
+
+Notification board (static or API-driven list of alerts).
+
+3. Notification Board: Firebase Firestore (Free Tier)
+Why: Real-time updates without complex coding.
+
+Setup:
+
+Store alerts as documents (e.g., { title: "OPT Deadline", date: "2024-03-01", details: "..." }).
+
+Fetch and display them in React.
+
+4. Deployment: Vercel/Netlify (Free Hosting)
+Host React app + Firebase integration.
+
+Step-by-Step Plan
+Week 1 (MVP):
+Build the Q&A Flow in Dialogflow:
+
+Add 10-20 sample intents (e.g., “What happens if I drop below full-time credits?”).
+
+Use USCIS F1 Guidelines as a knowledge source.
+
+Sample Response:
+
+plaintext
+Copy
+"F1 students must maintain full-time enrollment (12+ credits). Dropping below may risk visa status. Contact your DSO immediately."  
+Create a Simple React Webapp:
+
+Embed Dialogflow using @botonic/react or react-chat-widget.
+
+Add a static notification section (hardcode 3-5 test alerts).
+
+Add Hyperlink to Schedule Meetings:
+
+Use a button in Dialogflow:
+
+json
+Copy
+"text": "Schedule an appointment: [University Portal](https://your-university-schedule-link.com)"  
+Week 2-3 (Enhancements):
+Connect Firebase for Notifications:
+
+Fetch alerts dynamically from Firestore.
+
+Add Fallback Intent Handling:
+
+Train Dialogflow to respond with “Please consult your DSO for specifics” for unhandled queries.
+
+Basic Analytics:
+
+Track common questions with Dialogflow’s built-in analytics.
+
+Long-Term Upgrades (Advanced AI):
+Integrate Rasa or TensorFlow:
+
+Use NLP to parse complex student queries (e.g., “I’m graduating in December; when does my OPT start?”).
+
+Automated Alerts:
+
+Scrape university websites for deadline updates using Python + BeautifulSoup.
+
+Multilingual Support:
+
+Add Google Translate API for international students.
+
+Security & Compliance
+No Personal Data: Ensure Dialogflow/Firebase settings disable logging.
+
+HTTPS: Enforce SSL on your webapp (Vercel/Netlify do this by default).
+
+Disclaimer: Add “This bot provides general guidance only. Consult your DSO for official advice.”
