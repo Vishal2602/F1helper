@@ -8,13 +8,23 @@ import { Send, Loader2, MessageCircle } from "lucide-react";
 import type { QAResponse } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { detectIntent } from "@/lib/dialogflow-service";
+import { detectEmotion } from "@/lib/emotion-detector";
+import { MascotAvatar } from "./MascotAvatar";
 import { nanoid } from "nanoid";
+
+type Message = {
+  isUser: boolean;
+  text: string;
+};
 
 export function ChatBot() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => nanoid());
-  const [messages, setMessages] = useState<Array<{ isUser: boolean; text: string }>>([
+  const [currentEmotion, setCurrentEmotion] = useState<
+    "neutral" | "happy" | "thinking" | "confused"
+  >("neutral");
+  const [messages, setMessages] = useState<Message[]>([
     {
       isUser: false,
       text: "Hi! I'm your F1 visa assistant. I can help you with questions about academic requirements, work authorization, travel, and maintaining your visa status. What would you like to know?"
@@ -31,6 +41,7 @@ export function ChatBot() {
     const userMessage = { isUser: true, text: input.trim() };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    setCurrentEmotion("thinking");
 
     // Show typing indicator immediately
     setMessages(prev => [...prev, { isUser: false, text: "..." }]);
@@ -42,9 +53,11 @@ export function ChatBot() {
 
         if (dialogflowResponse.confidence > 0.7 && dialogflowResponse.fulfillmentText) {
           // Use Dialogflow response if confidence is high
+          const botResponse = dialogflowResponse.fulfillmentText;
+          setCurrentEmotion(detectEmotion(botResponse));
           setMessages(prev => [...prev.slice(0, -1), { 
             isUser: false, 
-            text: dialogflowResponse.fulfillmentText 
+            text: botResponse
           }]);
 
           // Track the question if we have an intent
@@ -81,10 +94,14 @@ export function ChatBot() {
         botResponse = "I don't have specific information about that. To ensure you get accurate guidance, please consult with your DSO (Designated School Official) or check the USCIS website: https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors";
       }
 
+      // Set emotion based on the response
+      setCurrentEmotion(detectEmotion(botResponse));
+
       // Replace typing indicator with actual response
       setMessages(prev => [...prev.slice(0, -1), { isUser: false, text: botResponse }]);
     } catch (error) {
       console.error("Error processing message:", error);
+      setCurrentEmotion("confused");
       setMessages(prev => [...prev.slice(0, -1), {
         isUser: false,
         text: "I'm having trouble understanding that right now. Could you try rephrasing your question?"
@@ -99,7 +116,12 @@ export function ChatBot() {
     <Card className="h-[600px] flex flex-col">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5" />
+          <div className="relative">
+            <MascotAvatar emotion={currentEmotion} />
+            {isLoading && (
+              <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-full animate-ping" />
+            )}
+          </div>
           F1 Visa Assistant
         </CardTitle>
       </CardHeader>
