@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2 } from "lucide-react";
 import { MascotAvatar } from "./MascotAvatar";
-import { detectIntent } from "@/lib/dialogflow-service";
 import { getGrokResponse } from "@/lib/grok-service";
 import { nanoid } from "nanoid";
 

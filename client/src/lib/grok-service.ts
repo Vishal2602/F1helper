@@ -46,7 +46,7 @@ export async function getGrokResponse(question: string): Promise<string> {
     const client = await initializeXAI();
 
     const response = await client.chat.completions.create({
-      model: "grok-2-1212",
+      model: "grok-1",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: question }
