@@ -6,12 +6,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2 } from "lucide-react";
 import { MascotAvatar } from "./MascotAvatar";
 import { detectIntent } from "@/lib/dialogflow-service";
-import { getGrokResponse } from "@/lib/grok-service";
+import { getAIResponse } from "@/lib/openai-service";
+import { QuestionCategories } from "./QuestionCategories";
+import { apiRequest } from "@/lib/queryClient";
 import { nanoid } from "nanoid";
+import { QAResponse } from "@shared/schema";
 
 type Message = {
   isUser: boolean;
   text: string;
+};
+
+type PDFSearchResponse = {
+  content?: string;
+  relevance?: number;
 };
 
 export function ChatBot() {
@@ -52,11 +60,37 @@ export function ChatBot() {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
+  const handleCategorySelect = async (category: string) => {
+    setCurrentEmotion("thinking");
+    setIsLoading(true);
+
+    try {
+      // Get questions for the selected category
+      const response = await apiRequest<QAResponse[]>("GET", `/api/qa/${category}`);
+      const questions = response.map(qa => qa.question).join("\n");
+
+      const prompt = `Here are some common questions about ${category}:\n${questions}\nWhat specific question do you have about this topic?`;
+
+      setMessages(prev => [...prev, { isUser: false, text: prompt }]);
+      setCurrentEmotion("happy");
+    } catch (error) {
+      console.error("Error fetching category questions:", error);
+      setCurrentEmotion("confused");
+      setMessages(prev => [...prev, {
+        isUser: false,
+        text: "I had trouble loading questions for that category. Please try asking your question directly."
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage = { isUser: true, text: input.trim() };
     setMessages(prev => [...prev, userMessage]);
+    setInput("");
     setIsLoading(true);
     setCurrentEmotion("thinking");
 
@@ -71,22 +105,39 @@ export function ChatBot() {
         response = getGreetingResponse();
         setCurrentEmotion("happy");
       } else {
-        // First try to detect intent with Dialogflow
-        const dialogflowResponse = await detectIntent(input.trim(), sessionId);
+        try {
+          // Search PDF content for relevant information
+          const pdfSearchResponse = await apiRequest<PDFSearchResponse>("POST", "/api/pdf/search", {
+            query: input.trim()
+          });
 
-        // Use Grok to generate a natural response
-        let contextPrompt = "";
-        if (dialogflowResponse.intent) {
-          contextPrompt = `The user is asking about ${dialogflowResponse.intent}. `;
-        }
+          if (pdfSearchResponse?.content) {
+            response = await getAIResponse(input.trim(), pdfSearchResponse.content);
+          } else {
+            response = await getAIResponse(input.trim());
+          }
 
-        response = await getGrokResponse(input.trim(), contextPrompt);
-
-        // Set emotion based on confidence
-        if (dialogflowResponse.confidence > 0.7) {
+          // Set emotion based on response
           setCurrentEmotion("happy");
-        } else {
-          setCurrentEmotion("neutral");
+        } catch (error) {
+          console.error("Error with AI services:", error);
+          // Fallback to PDF search only if AI services fail
+          try {
+            const pdfSearchResponse = await apiRequest<PDFSearchResponse>("POST", "/api/pdf/search", {
+              query: input.trim()
+            });
+
+            if (pdfSearchResponse?.content) {
+              response = `Based on our F1 visa guide: ${pdfSearchResponse.content}`;
+            } else {
+              response = "I apologize, but I couldn't find a specific answer to your question. Please try rephrasing or ask about a different topic.";
+            }
+            setCurrentEmotion("neutral");
+          } catch (searchError) {
+            console.error("Error with PDF search:", searchError);
+            response = "I apologize, but I'm having trouble accessing my knowledge base right now. Please try again in a moment.";
+            setCurrentEmotion("confused");
+          }
         }
       }
 
@@ -101,7 +152,6 @@ export function ChatBot() {
       }]);
     } finally {
       setIsLoading(false);
-      setInput("");
     }
   };
 
@@ -119,7 +169,8 @@ export function ChatBot() {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col overflow-hidden p-4">
-        <ScrollArea className="flex-1 pr-4 -mr-4">
+        <QuestionCategories onSelectCategory={handleCategorySelect} />
+        <ScrollArea className="flex-1 pr-4 -mr-4 mt-4">
           <div className="space-y-4">
             {messages.map((msg, idx) => (
               <div
