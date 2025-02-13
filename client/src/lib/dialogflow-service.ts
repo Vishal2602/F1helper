@@ -29,7 +29,7 @@ async function initializeDialogflow() {
     } catch (error) {
       console.error('Dialogflow initialization error:', error);
       sessionsClient = null;
-      throw new Error('Failed to initialize Dialogflow client. Please check your Google Cloud credentials.');
+      throw new Error('Failed to initialize Dialogflow client');
     }
   }
   return sessionsClient;

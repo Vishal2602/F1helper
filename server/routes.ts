@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { searchPDFContent } from "./services/pdf-processor";
 
 export function registerRoutes(app: Express) {
   app.get("/api/config/xai", (_req, res) => {
@@ -40,21 +39,6 @@ export function registerRoutes(app: Express) {
       res.status(500).json({
         message: "Invalid Dialogflow credentials format"
       });
-    }
-  });
-
-  app.post("/api/pdf/search", async (req, res) => {
-    try {
-      const { query } = req.body;
-      if (!query) {
-        return res.status(400).json({ message: "Query is required" });
-      }
-
-      const searchResult = await searchPDFContent(query);
-      res.json(searchResult);
-    } catch (error) {
-      console.error("PDF search error:", error);
-      res.status(500).json({ message: "Error searching PDF content" });
     }
   });
 

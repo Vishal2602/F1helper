@@ -16,6 +16,7 @@ async function initializeOpenAI() {
       }
 
       openai = new OpenAI({
+        baseURL: "https://api.x.ai/v1",
         apiKey: config.xaiKey,
         dangerouslyAllowBrowser: true
       });
@@ -59,7 +60,7 @@ export async function getAIResponse(question: string, context?: string): Promise
     messages.push({ role: "user", content: question });
 
     const response = await client.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "grok-2-1212",
       messages: messages as any,
       temperature: 0.7,
       max_tokens: 500
